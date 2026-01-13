@@ -4,7 +4,7 @@ DaVinci Script Proxy Generator
 Automates proxy generation for DaVinci Resolve
 """
 
-__version__ = "1.5.1"
+__version__ = "1.5.2"
 __author__ = 'userprojekt'
 
 
@@ -15,6 +15,10 @@ import sys
 import argparse
 import json
 from datetime import datetime
+
+class ProxyGeneratorError(Exception):
+    # Custom exception for known proxy generator errors
+    pass
 
 def counter():
     i = 0
@@ -199,7 +203,6 @@ def parse_selection(choice, max_num):
     return sorted(set(indices))  # Remove duplicates and sort
 
 def process_files_in_resolve(organized_files, selected_footage_folders, proxy_folder_path, subfolder_depth, is_directory_mode=False, clean_image=False, codec='auto'):
-    """Process files in DaVinci Resolve"""
     # Create project with appropriate name based on mode
     ProjectManager = resolve.GetProjectManager()
 
@@ -307,12 +310,8 @@ def process_files_in_resolve(organized_files, selected_footage_folders, proxy_fo
             
             # Import items (could be files or folders)
             try:
-                # Filter to only existing items
-                items_to_import = [item for item in items if os.path.exists(item)]
-                
-                if not items_to_import:
-                    print(f"    No existing items found")
-                    continue
+                # Import items (files or folders - DaVinci will handle appropriately)
+                items_to_import = items
                 
                 # Import items (files or folders - DaVinci will handle appropriately)
                 uncat_clips = MediaStorage.AddItemListToMediaPool(items_to_import)
@@ -435,13 +434,15 @@ def process_json_mode(json_path, proxy_path, dataset, in_depth, out_depth,
         with open(json_path, 'r', encoding='utf-8') as f:
             comparison_data = json.load(f)
     except Exception as e:
-        print(f"Error reading JSON file: {e}")
-        sys.exit(1)
+        raise ProxyGeneratorError(f"Error reading JSON file: {e}")
+
+    # Validate depths
+    if out_depth < in_depth:
+        raise ValueError(f"Error: Input depth must be ≤ onput depth")
     
     # Validate dataset parameter
     if dataset not in [1, 2]:
-        print(f"Error: Invalid dataset value '{dataset}'. Must be 1 or 2.")
-        sys.exit(1)
+        raise ProxyGeneratorError(f"Error: Invalid dataset value '{dataset}'. Must be 1 or 2.")
     
     # Get the selected file list
     if dataset == 1:
@@ -460,8 +461,7 @@ def process_json_mode(json_path, proxy_path, dataset, in_depth, out_depth,
             print(f"Added {len(mismatch_files)} files from frame count mismatches (group 2)")
     
     if not file_list:
-        print(f"No files found in group{dataset}")
-        sys.exit(1)
+        raise ProxyGeneratorError(f"No files found in group{dataset}")
     
     print(f"Found {len(file_list)} files in group{dataset}")
     
@@ -493,8 +493,7 @@ def process_json_mode(json_path, proxy_path, dataset, in_depth, out_depth,
     )
     
     if not organized_files:
-        print("No folders to process after filtering.")
-        sys.exit(1)
+        raise ProxyGeneratorError("No folders to process after filtering.")
     
     # Process filtered folders
     selected_folders = list(organized_files.keys())
@@ -508,8 +507,11 @@ def process_directory_mode(footage_path, proxy_path, in_depth, out_depth,
     """Process footage folder with absolute input/output depths"""
 
     if not os.path.exists(footage_path):
-        print(f"Error: Footage folder does not exist: {footage_path}")
-        sys.exit(1)
+        raise ProxyGeneratorError(f"Error: Footage folder does not exist: {footage_path}")
+
+    # Validate depths
+    if out_depth < in_depth:
+        raise ValueError(f"Error: Input depth must be ≤ onput depth")
     
     # Calculate the depth of the footage folder itself
     footage_parts = [p for p in footage_path.split(os.sep) if p]
@@ -537,8 +539,7 @@ def process_directory_mode(footage_path, proxy_path, in_depth, out_depth,
             dirs.clear()
     
     if not input_depth_folders:
-        print(f"No folders found at depth {in_depth} within the footage tree")
-        sys.exit(1)
+        raise ProxyGeneratorError(f"No folders found at depth {in_depth} within the footage tree")
     
     print(f"Found {len(input_depth_folders)} folders at depth {in_depth}")
     
@@ -632,13 +633,12 @@ def process_directory_mode(footage_path, proxy_path, in_depth, out_depth,
             print(f"Warning: No matching folders found for filter: {filter_list}")
             available = [os.path.basename(f) for f in target_folders_by_input.keys()]
             print(f"Available folders: {', '.join(available)}")
-            sys.exit(1)
+            raise ProxyGeneratorError(f"Warning: No matching folders found for filter: {filter_list}")
         
         target_folders_by_input = filtered
     
     if not target_folders_by_input:
-        print("No folders to process after filtering.")
-        sys.exit(1)
+        raise ProxyGeneratorError("No folders to process after filtering.")
     
     # Flatten all target folders for processing
     all_target_folders = []
@@ -673,6 +673,8 @@ def is_json_file(path):
 def main():
     parser = argparse.ArgumentParser(
         description='''DaVinci Resolve Proxy Generator
+
+v1.5.2
 
 This script supports two modes:
 1. Directory Mode: Generate proxies for footage folders with automatic bin organization
@@ -746,10 +748,6 @@ up to the specified subfolder level.''',
         in_depth = args.in_depth
         out_depth = args.out_depth
         
-        # Validate depths
-        if out_depth < in_depth:
-            parser.error("Output depth must be >= input depth")
-        
         # Determine filter mode
         filter_mode = None
         filter_list = None
@@ -772,10 +770,6 @@ up to the specified subfolder level.''',
         proxy_path = clean_path_input(args.proxy)
         in_depth = args.in_depth
         out_depth = args.out_depth
-        
-        # Validate depths
-        if out_depth < in_depth:
-            parser.error("Output depth must be >= input depth")
 
         # Determine filter mode
         filter_mode = None
@@ -796,10 +790,6 @@ up to the specified subfolder level.''',
         proxy_path = clean_path_input(args.args[1])
         in_depth = args.in_depth
         out_depth = args.out_depth
-        
-        # Validate depths
-        if out_depth < in_depth:
-            parser.error("Output depth must be >= input depth")
         
         # Determine filter mode
         filter_mode = None
