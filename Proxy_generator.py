@@ -12,6 +12,7 @@ import DaVinciResolveScript as dvr_script
 resolve = dvr_script.scriptapp("Resolve")
 import os
 import sys
+import platform
 import argparse
 import json
 from datetime import datetime
@@ -707,10 +708,11 @@ up to the specified subfolder level.''',
     parser.add_argument('-d', '--dataset', type=int, choices=[1, 2], 
                         help='Select dataset: 1 for files_only_in_group1, 2 for files_only_in_group2 (JSON mode only)')
     parser.add_argument('-p', '--proxy', help='Proxy folder path')
-    parser.add_argument('-i', '--in-depth', type=int, default=4,
-                       help='Directory depth to start from (default: 4, typically Shooting day folder)')
-    parser.add_argument('-o', '--out-depth', type=int, default=4,
-                       help='Directory depth to include up to (default: 4, typically Shooting day folder)')
+    default_depth = 5 if platform.system() == 'Darwin' else 4
+    parser.add_argument('-i', '--in-depth', type=int, default=default_depth,
+                       help=f'Directory depth to start from (default: {default_depth}, typically Shooting day folder)')
+    parser.add_argument('-o', '--out-depth', type=int, default=default_depth,
+                       help=f'Directory depth to include up to (default: {default_depth}, typically Shooting day folder)')
 
     # Add folder selection options
     selection_group = parser.add_mutually_exclusive_group()
