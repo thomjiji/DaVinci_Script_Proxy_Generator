@@ -1,33 +1,3 @@
-# AGENTS.md
-
-This file provides guidance to Codex, Claude Code and other agents when working with code in this repository.
-
-## Project
-
-Python script that automates footage import and proxy generation in DaVinci Resolve. The project is under active refactoring — avoid cementing implementation details; prefer configurable/extensible patterns.
-
-## Commit Style
-
-Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): description`
-Common types: `feat`, `fix`, `chore`, `refactor`, `test`, `docs`
-
-## Commit Workflow
-
-- After each completed, verified modification batch, create a git commit by default without waiting for an extra user reminder.
-- Use small, reversible commits so problematic changes can be reverted cleanly.
-- Only hold off on committing when the user explicitly asks not to commit yet, or when the work is still in a broken/unverified intermediate state.
-- Do not push unless the user asks for a push.
-
-## Cross-OS Test Rules
-
-CI runs on Windows and macOS. Two rules that have caused real failures:
-
-- Never hardcode path separators in test expectations; build them with `Path`
-  so they hold on Windows (`\`) and POSIX (`/`).
-- Never rely on filesystem enumeration order (`os.walk`, `scandir`):
-  alphabetical on NTFS, arbitrary on ext4. If order matters, sort in the
-  product code so behavior is deterministic everywhere.
-
 ## Python Constraint
 
 Resolve's `fusionscript` binding requires a **system** (python.org) CPython —
@@ -36,21 +6,10 @@ uv-managed interpreters silently fail to connect, hence
 
 ## Releases
 
-Version is derived automatically from git tags via `hatch-vcs` — there is no version string to edit in code.
+Versions are monotonically increasing release identifiers, not Semantic Versioning compatibility promises.
 
-**Semver rules:**
-- `PATCH` (x.x.N) — bug fixes, internal cleanup, no behaviour change
-- `MINOR` (x.N.0) — new feature or behaviour, backwards compatible
-- `MAJOR` (N.0.0) — breaking change: CLI flags removed/renamed, output format changed, etc.
-
-**When to tag:** when the accumulated commits since the last tag are ready for users — not every commit, not every PR. A meaningful feature or important fix is a good trigger. Batch breaking changes into one MAJOR rather than releasing each immediately.
-
-**Version lineage:** the upstream project (User22's DaVinci_Script_Proxy_Generator) ended at 1.5.2. This fork deliberately bumped to v2.0.0 after the uv/package refactor to distinguish itself from upstream. Do not move back to 0.x — versions below 1.5.2 would read as older than the original. Fast MAJOR growth is acceptable here: there is no PyPI and all consumers are the author's own machines.
-
-**How to release:**
-```sh
-git tag v2.1.0
-git push origin v2.1.0
-```
-
-That's it — no file edits needed. The version is read from the tag at build/install time.
+- Increment the third number for routine releases, including fixes, small features, and scoped behavior changes.
+- Increment the second number for larger feature batches.
+- Increment the first number only when the maintainer explicitly declares a new project era. Breaking changes do not automatically require it; call them out in the release notes instead.
+- `hatch-vcs` derives the version from git tags; do not edit a version string in source code.
+- Release useful accumulated work with `git tag vX.Y.Z` followed by `git push origin vX.Y.Z`; the tag workflow builds and publishes the GitHub Release artifacts.
