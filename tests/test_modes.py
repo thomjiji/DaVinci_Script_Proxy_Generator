@@ -327,6 +327,36 @@ class TestProcessJsonMode:
         with pytest.raises(PxygenError, match="group_a"):
             process_json_mode(str(json_path), "/proxy", "a", 1, 1)
 
+    def test_optional_category_folders_are_preserved_above_camera_batches(self, tmp_path):
+        json_path = tmp_path / "comparison.json"
+        json_path.write_text(
+            json.dumps(
+                {
+                    "group_a": {"directories": ["/Volumes/SSD/Footage"]},
+                    "unique_in_a": [
+                        "/Volumes/SSD/Footage/Day1/FX3#1/CARD-A/clip1.mov",
+                        "/Volumes/SSD/Footage/Day1/多机位/FX6#2/CARD-B/clip2.mov",
+                        "/Volumes/SSD/Footage/Day1/纪录/FX3#3/clip3.mov",
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
+            process_json_mode(str(json_path), "/proxy", "a", 1, 2)
+
+        plan = mock_execute.call_args.args[0]
+        batches = {
+            batch.subfolder_key: Path(batch.target_dir)
+            for batch in plan.footage_folders[0].batches
+        }
+        assert batches == {
+            "FX3#1": Path("/proxy") / "Day1" / "FX3#1",
+            "多机位/FX6#2": Path("/proxy") / "Day1" / "多机位" / "FX6#2",
+            "纪录/FX3#3": Path("/proxy") / "Day1" / "纪录" / "FX3#3",
+        }
+
     def test_multiple_group_roots_group_independently(self, tmp_path):
         json_path = tmp_path / "comparison.json"
         json_path.write_text(
@@ -454,6 +484,26 @@ class TestProcessDirectoryMode:
         }
         assert sorted(day1_batches) == ["CamA", "CamB"]
         assert day1_batches["CamA"] == [str(footage_root / "Day1" / "CamA")]
+
+    def test_optional_category_folders_are_preserved_above_camera_batches(self, tmp_path):
+        footage_root = tmp_path / "footage"
+        (footage_root / "Day1" / "FX3#1").mkdir(parents=True)
+        (footage_root / "Day1" / "多机位" / "FX6#2").mkdir(parents=True)
+        (footage_root / "Day1" / "纪录" / "FX3#3").mkdir(parents=True)
+
+        with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
+            process_directory_mode(str(footage_root), "/proxy", 1, 2)
+
+        plan = mock_execute.call_args.args[0]
+        batches = {
+            batch.subfolder_key: Path(batch.target_dir)
+            for batch in plan.footage_folders[0].batches
+        }
+        assert batches == {
+            "FX3#1": Path("/proxy") / "Day1" / "FX3#1",
+            "多机位/FX6#2": Path("/proxy") / "Day1" / "多机位" / "FX6#2",
+            "纪录/FX3#3": Path("/proxy") / "Day1" / "纪录" / "FX3#3",
+        }
 
     def test_outputs_directory_summary_and_selection_as_compact_blocks(self, tmp_path):
         footage_root = tmp_path / "footage"

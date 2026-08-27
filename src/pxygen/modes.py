@@ -15,6 +15,7 @@ from pathlib import Path
 from .organize import (
     describe_folders_at_in_depth,
     filter_folders_at_in_depth,
+    is_batch_container,
     normalize_filter_names,
     organize_directory_mode_folders,
     organize_json_mode_files,
@@ -122,6 +123,17 @@ def _collect_directory_tree(root: Path) -> list[Path]:
         directories.append(current)
         stack.extend(reversed(_iter_child_directories(current)))
     return directories
+
+
+def _expand_batch_containers(folders: list[str]) -> list[str]:
+    """Replace optional category folders with their child camera folders."""
+    expanded: list[str] = []
+    for folder in folders:
+        children = _iter_child_directories(Path(folder)) if is_batch_container(folder) else []
+        expanded.extend(str(child) for child in children)
+        if not children:
+            expanded.append(folder)
+    return expanded
 
 
 def process_json_mode(
@@ -443,6 +455,7 @@ def process_directory_mode(
                 input_folder,
             )
 
+        target_folders = _expand_batch_containers(target_folders)
         targets_by_input[input_folder] = target_folders or [input_folder]
         logger.debug(
             "Input folder %s produced %d target folder(s)",
@@ -500,6 +513,7 @@ def process_directory_mode(
             all_target_folders,
             in_depth_spec.resolved,
             out_depth_spec.resolved,
+            items_are_directories=True,
         )
 
     if not organized:

@@ -5,6 +5,8 @@ from dataclasses import dataclass
 
 from .paths import compute_key_path, path_name, path_parts, subfolder_key_from_parts
 
+_BATCH_CONTAINER_NAMES = frozenset({"多机位", "纪录"})
+
 
 @dataclass(frozen=True)
 class FolderOption:
@@ -43,17 +45,26 @@ def parse_selection(choice: str, max_num: int) -> list[int]:
     return sorted(indices)
 
 
+def is_batch_container(path: str) -> bool:
+    """Return whether *path* is an optional category above camera folders."""
+    return path_name(path) in _BATCH_CONTAINER_NAMES
+
+
 def organize_json_mode_files(
     file_paths: list[str],
     in_depth: int,
     out_depth: int,
+    *,
+    items_are_directories: bool = False,
 ) -> dict[str, dict[str, list[str]]]:
     """Group file paths into ``{key_path: {subfolder_key: [file_paths]}}``
 
     *key_path* is the absolute path up to *in_depth* components.
     *subfolder_key* is the path fragment between *in_depth* and *out_depth*
-    (empty string when depths are equal).
-    Files whose depth is less than *in_depth* are skipped.
+    (empty string when depths are equal). Optional ``多机位`` and ``纪录``
+    containers at *out_depth* are preserved, with their child camera folder
+    included in the subfolder key. Files whose depth is less than *in_depth*
+    are skipped.
     """
     organized: dict[str, dict[str, list[str]]] = {}
     for file_path in file_paths:
@@ -61,8 +72,16 @@ def organize_json_mode_files(
         key_path = compute_key_path(parts, in_depth)
         if key_path is None:
             continue
-        if out_depth > in_depth:
-            subfolder_parts = parts[in_depth:out_depth]
+        effective_out_depth = out_depth
+        trailing_item_parts = 0 if items_are_directories else 1
+        if (
+            out_depth > in_depth
+            and len(parts) > out_depth + trailing_item_parts
+            and parts[out_depth - 1] in _BATCH_CONTAINER_NAMES
+        ):
+            effective_out_depth += 1
+        if effective_out_depth > in_depth:
+            subfolder_parts = parts[in_depth:effective_out_depth]
             subfolder_key = subfolder_key_from_parts(subfolder_parts)
         else:
             subfolder_key = ""

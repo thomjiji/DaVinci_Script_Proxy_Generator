@@ -60,6 +60,8 @@ Depth values now support a more intuitive relative interpretation:
 
 So `-n 1 -d 2` means: group by Day, include camera reels as subfolders.
 
+At the output depth, folders named `多机位` or `纪录` are treated as optional category containers. Their names are preserved in the Resolve bin and proxy output paths, while their immediate child camera folders become the actual import batches. This makes both `Day/FX3#1/...` and `Day/多机位/FX3#1/...` stop mirroring at `FX3#1`; deeper camera-card directory structures are imported recursively but not reproduced in the proxy output.
+
 ### Folder Selection *(mutually exclusive)*
 
 | Flag | Description |
