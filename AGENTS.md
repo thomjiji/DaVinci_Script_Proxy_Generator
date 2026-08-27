@@ -1,8 +1,6 @@
 ## Python Constraint
 
-Resolve's `fusionscript` binding requires a **system** (python.org) CPython —
-uv-managed interpreters silently fail to connect, hence
-`python-preference = "only-system"`.
+Resolve's `fusionscript` binding requires a **system** (python.org) CPython — uv-managed interpreters silently fail to connect, hence `python-preference = "only-system"`.
 
 ## Releases
 
