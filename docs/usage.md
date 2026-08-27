@@ -48,7 +48,7 @@ Depth values now support a more intuitive relative interpretation:
 | Flag | Default (macOS / other) | Description |
 |------|-------------------------|-------------|
 | `-n, --in-depth N` | 1 | Depth of the shooting-day folders |
-| `-d, --out-depth N` | 1 | Depth of the camera-reel folders (≥ in-depth) |
+| `-d, --out-depth N` | 2 | Depth of the camera-reel folders (≥ in-depth) |
 
 **Example** — if your input folder is `/Volumes/SSD/Footage`:
 

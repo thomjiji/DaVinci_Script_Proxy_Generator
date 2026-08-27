@@ -74,7 +74,7 @@ class TestParser:
     def test_defaults(self):
         args = self._parse(["-i", "/f", "-o", "/p"])
         assert args.in_depth == 1
-        assert args.out_depth == 1
+        assert args.out_depth == 2
         assert args.group == "a"
         assert args.codec == "auto"
         assert args.log_level == "warning"
